@@ -5,6 +5,8 @@ import 'package:spark/route_import.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
   await SupabaseManager.init();
   runApp(const Spark());
 }

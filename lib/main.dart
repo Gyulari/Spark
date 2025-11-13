@@ -23,6 +23,8 @@ class Spark extends StatelessWidget {
       routes: {
         '/': (_) => InitialScreen(),
         '/login': (_) => LoginScreen(),
+        '/login/signup': (_) => SignupScreen(),
+        '/home': (_) => HomeScreen(),
       },
       initialRoute: '/',
 

@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'package:spark/app_import.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
+import 'package:spark/parking_lot.dart';
 
 class MapView extends StatefulWidget {
   const MapView({super.key});
@@ -21,6 +22,7 @@ class _MapViewState extends State<MapView> {
   LatLng? curUserPos;
   bool _hasCenteredToUser = false;
 
+  Set<Marker> lotMarkers = {};
   Set<Marker> curPosMarker = {};
   Set<Marker> markers = {};
 
@@ -127,14 +129,14 @@ class _MapViewState extends State<MapView> {
 
       curPosMarker.clear();
       curPosMarker.add(curPos);
-      markers = curPosMarker;
+      markers = {...lotMarkers, ...curPosMarker};
     });
   }
 
   void _removeCurPosMarker() async {
     setState(() {
       curPosMarker.clear();
-      markers = {};
+      markers = {...lotMarkers};
     });
 
     mapController.clearMarker(markerIds: markers.map((e) => e.markerId).toList());
@@ -153,6 +155,39 @@ class _MapViewState extends State<MapView> {
     }
   }
 
+  Future<void> _loadParkingLotsMarkers(LatLngBounds bounds) async {
+    final lotsData = await fetchParkingLotsInBounds(bounds);
+
+    setState(() {
+      lotMarkers = lotsData.map((l) {
+        final addressText = l.displayAddress.isNotEmpty
+          ? l.displayAddress
+          : '주소 정보 없음';
+
+        return Marker(
+          markerId: l.managementNumber.toString(),
+          latLng: LatLng(l.latitude, l.longitude),
+        );
+      }).toSet();
+
+      markers = {...lotMarkers, ...curPosMarker};
+    });
+  }
+
+  Future<List<ParkingLot>> fetchParkingLotsInBounds(LatLngBounds bounds) async {
+    final res = await SupabaseManager.client
+        .from('PublicParkingLot')
+        .select('*')
+        .gte('latitude', bounds.getSouthWest().latitude)
+        .lte('latitude', bounds.getNorthEast().latitude)
+        .gte('longitude', bounds.getSouthWest().longitude)
+        .lte('longitude', bounds.getNorthEast().longitude);
+
+    return (res as List)
+        .map((e) => ParkingLot.fromMap(e as Map<String, dynamic>))
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -160,9 +195,24 @@ class _MapViewState extends State<MapView> {
         KakaoMap(
           onMapCreated: ((controller) async {
             mapController = controller;
+            mapController.getBounds().then((bounds) {
+              _loadParkingLotsMarkers(bounds);
+            });
+            // final bounds = await mapController.getBounds();
+            // await _loadParkingLotsMarkers(bounds);
           }),
           onCameraIdle: (LatLng center, int zoomLevel) {
-
+            if(zoomLevel < 5) {
+              mapController.getBounds().then((bounds) {
+                _loadParkingLotsMarkers(bounds);
+              });
+            } else {
+              setState(() {
+                lotMarkers.clear();
+                markers = {...curPosMarker};
+                mapController.clearMarker(markerIds: markers.map((e) => e.markerId).toList());
+              });
+            }
           },
           center: curCenter,
           currentLevel: 3,

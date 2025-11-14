@@ -1,9 +1,11 @@
 import 'package:spark/app_import.dart';
 import 'package:spark/style.dart';
 import 'package:spark/route_import.dart';
+import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AuthRepository.initialize(appKey: 'd048fb7ea16988dc1a7928b0e450f4f7');
 
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
@@ -18,7 +20,7 @@ class Spark extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Safe Ride',
+      title: 'Spark',
 
       routes: {
         '/': (_) => InitialScreen(),

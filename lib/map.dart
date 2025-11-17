@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'package:spark/app_import.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 import 'package:spark/parking_lot.dart';
+import 'package:spark/style.dart';
 
 class MapView extends StatefulWidget {
   const MapView({super.key});
@@ -25,6 +26,10 @@ class _MapViewState extends State<MapView> {
   Set<Marker> lotMarkers = {};
   Set<Marker> curPosMarker = {};
   Set<Marker> markers = {};
+
+  ParkingLot? selectedLot;
+
+  bool _parkingLotInfoLoading = false;
 
   Future<List<LatLng>> _keywordSearch(String keyword) async {
     const apiKey = '5d85b804b65d01a8faf7acb5d95d8c76';
@@ -188,6 +193,48 @@ class _MapViewState extends State<MapView> {
         .toList();
   }
 
+  Future<void> _showParkingLotInfoDialog(
+    BuildContext context, {
+      required ParkingLot lot,
+      VoidCallback? onClose,
+      bool barrierDismissible = false,
+  })
+  {
+    return showGeneralDialog(
+      context: context,
+      barrierDismissible: barrierDismissible,
+      barrierLabel: 'ParkingLotInfo',
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration(milliseconds: 180),
+      pageBuilder: (_, __, ___) {
+        return Center(
+          child: ParkingLotInfoDialog(
+            lot: lot,
+            onClose: onClose,
+          ),
+        );
+      },
+      transitionBuilder: (context, anim, _, child) {
+        final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(scale: Tween(begin: 0.96, end: 1.0).animate(curved), child: child),
+        );
+      },
+    );
+  }
+
+  Future<ParkingLot?> _getParkingLotByMarkerId(String markerId) async {
+    final res = await SupabaseManager.client
+        .from('PublicParkingLot')
+        .select('*')
+        .eq('management_number', int.parse(markerId))
+        .maybeSingle();
+
+    if(res == null) return null;
+    return ParkingLot.fromMap(res);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -219,6 +266,32 @@ class _MapViewState extends State<MapView> {
           zoomControl: true,
           zoomControlPosition: ControlPosition.bottomRight,
           markers: markers.toList(),
+          onMarkerTap: (markerId, latLng, level) async {
+            if(_parkingLotInfoLoading) return;
+
+            setState(() {
+              _parkingLotInfoLoading = true;
+            });
+
+            final lot = await _getParkingLotByMarkerId(markerId);
+
+            if(!context.mounted || lot == null) return;
+
+            _showParkingLotInfoDialog(
+              context,
+              lot: lot,
+              onClose: () {
+                setState(() {
+                  _parkingLotInfoLoading = false;
+                });
+              }
+            );
+
+            setState(() {
+              selectedLot = lot;
+            });
+          },
+          polylines: []
         ),
 
         SafeArea(
@@ -289,6 +362,167 @@ class MapSearchBar extends StatelessWidget {
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
         ),
+      ),
+    );
+  }
+}
+
+class ParkingLotInfoDialog extends StatelessWidget {
+  final ParkingLot lot;
+  final VoidCallback? onClose;
+
+  const ParkingLotInfoDialog({
+    super.key,
+    required this.lot,
+    this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 360.0,
+        margin: EdgeInsets.symmetric(horizontal: 16.0),
+        padding: EdgeInsets.symmetric(vertical: 12.0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 18.0,
+              offset: Offset(0, 8)
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 6.0),
+              child: Row(
+                children: [
+                  simpleText(
+                    '주차장 정보',
+                    16.0, FontWeight.bold, Colors.black, TextAlign.start
+                  ),
+
+                  Spacer(),
+
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20.0),
+                    onTap: () {
+                      Navigator.of(context).maybePop();
+                      onClose?.call();
+                    },
+                    child: Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Icon(
+                        Icons.close, size: 20.0, color: Colors.black,
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+
+            SizedBox(height: 8.0),
+
+            ParkingLotInfoRow(
+              icon: Icons.local_parking,
+              label: '주차장 이름',
+              trailingText: lot.name,
+            ),
+
+            divider(),
+
+            ParkingLotInfoRow(
+              icon: Icons.domain,
+              label: '주차장 유형',
+              trailingText: lot.type,
+            ),
+
+            divider(),
+
+            ParkingLotInfoRow(
+              icon: Icons.attach_money_rounded,
+              label: '요금',
+              trailingText: lot.price,
+            ),
+
+            divider(),
+
+            ParkingLotInfoRow(
+              icon: Icons.phone,
+              label: '연락처',
+              trailingText: lot.contact,
+            ),
+
+            divider(),
+
+            ParkingLotInfoRow(
+              icon: Icons.place,
+              label: '주소',
+              trailingText: lot.displayAddress,
+            ),
+
+            divider(),
+
+            ParkingLotInfoRow(
+              icon: Icons.directions_car,
+              label: '최대 주차 가능 대수',
+              trailingText: '${lot.scale}대',
+            ),
+
+            SizedBox(height: 16.0),
+          ],
+        ),
+      ),
+    );
+  }
+  // name, type, price, contact, address, scale,
+}
+
+class ParkingLotInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String? trailingText;
+  final Widget? trailing;
+
+  const ParkingLotInfoRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.trailingText,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 20.0, color: Colors.black),
+          SizedBox(width: 10.0),
+          Expanded(
+            child: simpleText(
+              label,
+              16.0, FontWeight.normal, Colors.black, TextAlign.start
+            ),
+          ),
+
+          if(trailing != null)
+            trailing!,
+
+          if(trailingText != null) ...[
+            simpleText(
+              trailingText!,
+              16.0, FontWeight.normal, Colors.black, TextAlign.start
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:http/http.dart' as http;
 import 'package:spark/app_import.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
@@ -12,20 +13,30 @@ class MapView extends StatefulWidget {
 }
 
 class _MapViewState extends State<MapView> {
-  late KakaoMapController mapController;
-
+  RoadLinkManager roadLinkManager = RoadLinkManager();
   StreamSubscription<Position>? _positionStream;
+
+  late KakaoMapController mapController;
+  final String kakaoRestApiKey = '5d85b804b65d01a8faf7acb5d95d8c76';
+
   bool _isGPSActive = false;
+  bool _isRoadLinkActive = false;
 
   final _searchC = TextEditingController();
 
   LatLng curCenter = LatLng(37.5665, 126.9780);
+  int curZoomLevel = 5;
+
   LatLng? curUserPos;
   bool _hasCenteredToUser = false;
 
   Set<Marker> lotMarkers = {};
   Set<Marker> curPosMarker = {};
   Set<Marker> markers = {};
+
+  Set<String> curRegions = {};
+  List<String> curRoadsInBound = [];
+  List<Polyline> polylines = [];
 
   ParkingLot? selectedLot;
 
@@ -235,6 +246,179 @@ class _MapViewState extends State<MapView> {
     return ParkingLot.fromMap(res);
   }
 
+  Future<void> updateRegions(LatLngBounds bounds) async {
+    if(curZoomLevel >= 5) return;
+
+    final newRegions = await getRegionsInBounds(bounds);
+
+    final preRegions = Set<String>.from(curRegions);
+    final regionsToRemove = preRegions.difference(newRegions);
+
+    for(var region in regionsToRemove) {
+      roadLinkManager.removePolylinesForRegion(region);
+      polylines = roadLinkManager.allRoadLinks;
+    }
+
+    curRegions.clear();
+
+    for(final region in newRegions) {
+      curRegions.add(region);
+
+      if(!preRegions.contains(region)) {
+        final newRoadLinks = await loadRoadsForRegion(region);
+        roadLinkManager.addPolylinesForRegion(region, newRoadLinks);
+        polylines = roadLinkManager.allRoadLinks;
+      }
+    }
+  }
+
+  Future<Set<String>> getRegionsInBounds(LatLngBounds bounds) async {
+    List<String> foundRegions = [];
+
+    const double step = 0.02;
+
+    for(double lat = bounds.getSouthWest().latitude; lat <= bounds.getNorthEast().latitude; lat += step) {
+      for(double lng = bounds.getSouthWest().longitude; lng <= bounds.getNorthEast().longitude; lng += step) {
+        final res = await http.get(
+          Uri.parse('https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=$lng&y=$lat'),
+          headers: {"Authorization": "KakaoAK $kakaoRestApiKey"},
+        );
+
+        if(res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          final doc = data['documents']?[0];
+
+          if(doc != null) {
+            final region = '${doc['region_1depth_name']}/${doc['region_2depth_name']}';
+            foundRegions.add(region);
+          }
+        } else {
+          debugPrint('Failed to call API for searching region information');
+        }
+
+        await Future.delayed(const Duration(milliseconds: 150));
+      }
+    }
+
+    return foundRegions.toSet();
+  }
+
+  Future<List<Polyline>> loadRoadsForRegion(String region) async {
+    var regionParts = region.split('/');
+    var region_1depth = regionParts[0], region_2depth = regionParts[1];
+
+    final rows = await fetchRoadNamesByRegion(region_1depth, region_2depth);
+
+    List<Polyline> roadLinks = [];
+
+    for(var roadName in rows) {
+      final lines = await fetchRoadGeometry(roadName);
+
+      for(final points in lines) {
+        if(points.isNotEmpty) {
+          roadLinks.add(
+            Polyline(
+              polylineId: UniqueKey().toString(),
+              points: points,
+              strokeColor: Colors.red,
+              strokeWidth: 3,
+            )
+          );
+        }
+      }
+    }
+
+    return roadLinks;
+  }
+
+  Future<List<String>> fetchRoadNamesByRegion(String region, String city) async {
+    final res = await SupabaseManager.client
+        .from('road_parking_restrict_zone')
+        .select('road_name')
+        .eq('region', region)
+        .eq('city', city);
+
+    final roadNames = (res as List)
+      .map((row) => row['road_name'] as String)
+      .where((roadName) => roadName.endsWith('로'))
+      .toSet();
+
+    return roadNames.toList();
+  }
+
+  Future<List<List<LatLng>>> fetchRoadGeometry(String roadName) async {
+    if(!roadName.endsWith('로')) return [];
+
+    final serviceKey = '1A45061F-99E8-35B1-ACB7-D5EB23C7D897';  // VWorld Service Key
+    final String bbox = '125.04,33.06,131.52,38.27';
+    final attr= Uri.encodeQueryComponent('road_name:like:$roadName');
+
+    final url = Uri.parse(
+        'https://api.vworld.kr/req/data?'
+            'service=data'
+            '&version=2.0'
+            '&request=GetFeature'
+            '&data=LT_L_MOCTLINK'
+            '&format=json'
+            '&key=$serviceKey'
+            '&domain=localhost'
+            '&crs=EPSG:4326'
+            '&geometry=true'
+            '&geomFilter=BOX($bbox)'
+            '&attrFilter=$attr'
+            '&size=100'
+    );
+
+    final res = await http.get(url);
+    final body = utf8.decode(res.bodyBytes);
+
+    if(!body.trim().startsWith('{')) {
+      debugPrint('It is not JSON:\n$body');
+      return [];
+    }
+
+    final data = jsonDecode(body);
+
+    if(data['response']?['status'] != 'OK') {
+      debugPrint('VWorld API Error: ${data['response']?['error']}');
+      return [];
+    }
+
+    final features = data['response']?['result']?['featureCollection']?['features'] ?? [];
+
+    List<List<LatLng>> allLinks = [];
+
+    for(final f in features) {
+      final props = f['properties'];
+      if(props == null) continue;
+
+      if(props['road_name']?.toString() != roadName) continue;
+
+      final geom = f['geometry'];
+      if(geom == null || geom['coordinates'] == null) continue;
+
+      for(final line in geom['coordinates']) {
+        final points = (line as List)
+            .map((pair) => LatLng(pair[1], pair[0]))
+            .toList();
+        allLinks.add(points);
+      }
+    }
+
+    return allLinks;
+  }
+
+  void _toggleRoadLinks() {
+    setState(() {
+      if(_isRoadLinkActive) {
+        _isRoadLinkActive = false;
+      }
+      else {
+        _isRoadLinkActive = true;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -242,17 +426,18 @@ class _MapViewState extends State<MapView> {
         KakaoMap(
           onMapCreated: ((controller) async {
             mapController = controller;
-            mapController.getBounds().then((bounds) {
-              _loadParkingLotsMarkers(bounds);
-            });
-            // final bounds = await mapController.getBounds();
-            // await _loadParkingLotsMarkers(bounds);
+            final curBounds = await mapController.getBounds();
+            _loadParkingLotsMarkers(curBounds);
           }),
-          onCameraIdle: (LatLng center, int zoomLevel) {
+          onCameraIdle: (LatLng center, int zoomLevel) async {
+            setState(() {
+              curZoomLevel = zoomLevel;
+            });
+
+            final curBounds = await mapController.getBounds();
+
             if(zoomLevel < 5) {
-              mapController.getBounds().then((bounds) {
-                _loadParkingLotsMarkers(bounds);
-              });
+              _loadParkingLotsMarkers(curBounds);
             } else {
               setState(() {
                 lotMarkers.clear();
@@ -260,6 +445,8 @@ class _MapViewState extends State<MapView> {
                 mapController.clearMarker(markerIds: markers.map((e) => e.markerId).toList());
               });
             }
+
+            updateRegions(curBounds);
           },
           center: curCenter,
           currentLevel: 3,
@@ -291,7 +478,7 @@ class _MapViewState extends State<MapView> {
               selectedLot = lot;
             });
           },
-          polylines: []
+          polylines: (_isRoadLinkActive && curZoomLevel < 5) ? polylines : [],
         ),
 
         SafeArea(
@@ -328,6 +515,22 @@ class _MapViewState extends State<MapView> {
             ),
           ),
         ),
+
+        Positioned(
+          top: 150.0,
+          right: 16.0,
+          child: FloatingActionButton(
+            mini: true,
+            backgroundColor: Colors.white,
+            onPressed: () async {
+              _toggleRoadLinks();
+            },
+            child: Icon(
+              _isRoadLinkActive ? Icons.map : Icons.map_outlined,
+              color: _isRoadLinkActive ? Colors.blueAccent : Colors.grey[400],
+            ),
+          ),
+        )
       ],
     );
   }
@@ -525,5 +728,30 @@ class ParkingLotInfoRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class RoadLinkManager {
+  Map<String, List<Polyline>> roadLinksForRegion = {};
+
+  void addPolylinesForRegion(String regionName, List<Polyline> newRoadLinks) {
+    if(!roadLinksForRegion.containsKey(regionName)) {
+      roadLinksForRegion[regionName] = newRoadLinks;
+    }
+  }
+
+  void removePolylinesForRegion(String regionName) {
+    if(roadLinksForRegion.containsKey(regionName)) {
+      roadLinksForRegion[regionName]?.clear();
+      roadLinksForRegion.remove(regionName);
+    }
+  }
+
+  List<Polyline> get allRoadLinks {
+    List<Polyline> allRoadLinks = [];
+    roadLinksForRegion.forEach((key, value){
+      allRoadLinks.addAll(value);
+    });
+    return allRoadLinks;
   }
 }

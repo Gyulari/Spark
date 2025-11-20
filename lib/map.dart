@@ -2,8 +2,8 @@ import 'dart:ui';
 import 'package:http/http.dart' as http;
 import 'package:spark/app_import.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
-import 'package:spark/parking_lot.dart';
 import 'package:spark/style.dart';
+import 'package:spark/reserve.dart';
 
 class MapView extends StatefulWidget {
   const MapView({super.key});
@@ -745,6 +745,35 @@ class ParkingLotInfoDialog extends StatelessWidget {
             ),
 
             SizedBox(height: 16.0),
+
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 14.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                    backgroundColor: Colors.blueAccent,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).maybePop();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReservationScreen(lot: lot),
+                      )
+                    );
+                  },
+                  child: simpleText(
+                    '예약하기',
+                    16.0, FontWeight.bold, Colors.white, TextAlign.center
+                  ),
+                ),
+              )
+            )
           ],
         ),
       ),

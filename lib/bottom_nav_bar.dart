@@ -25,6 +25,21 @@ class BottomNavBar extends StatelessWidget {
           label: '홈'
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.info_outline),
+          activeIcon: Icon(Icons.info),
+          label: '주차 정보',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.star_outline),
+          activeIcon: Icon(Icons.star),
+          label: '즐겨찾기',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.access_time_outlined),
+          activeIcon: Icon(Icons.access_time_filled),
+          label: '예약 내역'
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),
           activeIcon: Icon(Icons.person),
           label: '내 정보',

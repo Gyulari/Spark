@@ -1,5 +1,8 @@
 import 'package:spark/app_import.dart';
 import 'package:spark/map.dart';
+import 'package:spark/parking_info.dart';
+import 'package:spark/favorite.dart';
+import 'package:spark/reserve_history.dart';
 import 'package:spark/my_page.dart';
 import 'package:spark/bottom_nav_bar.dart';
 import 'package:spark/nav_stat.dart';
@@ -15,6 +18,9 @@ class HomeScreen extends StatefulWidget{
 class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     MapView(),
+    ParkingInfo(),
+    Favorite(),
+    ReserveHistory(),
     MyPage(),
   ];
 

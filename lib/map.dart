@@ -33,6 +33,8 @@ class _MapViewState extends State<MapView> {
   Set<Marker> lotMarkers = {};
   Set<Marker> curPosMarker = {};
   Set<Marker> markers = {};
+  Set<CustomOverlay> lotOverlays = {};
+  Set<CustomOverlay> overlays = {};
 
   Set<String> curRegions = {};
   List<String> curRoadsInBound = [];
@@ -175,18 +177,24 @@ class _MapViewState extends State<MapView> {
     final lotsData = await fetchParkingLotsInBounds(bounds);
 
     setState(() {
-      lotMarkers = lotsData.map((l) {
+      lotOverlays = lotsData.map((l) {
         final addressText = l.displayAddress.isNotEmpty
           ? l.displayAddress
           : '주소 정보 없음';
 
-        return Marker(
-          markerId: l.managementNumber.toString(),
+        final occupied = l.count / l.scale;
+        final colorClass = occupied >= 0.8 ? 'orange' : 'blue';
+
+        return CustomOverlay(
+          customOverlayId: l.managementNumber.toString(),
           latLng: LatLng(l.latitude, l.longitude),
+          content: '<div class="parking-overlay $colorClass"><span>${l.count}/${l.scale}</span></div><style>.parking-overlay {display: flex;align-items: center;justify-content: center;padding: 6px 12px;color: white;font-weight: bold;font-size: 22px;border-radius: 6px;box-shadow: 0 2px 4px rgba(0,0,0,0.3);white-space: nowrap;}.parking-overlay.blue {background-color: #2D9CDB;}.parking-overlay.orange {background-color: #F2994A;}</style>',
+          xAnchor: 0.0,
+          yAnchor: 0.0,
         );
       }).toSet();
 
-      markers = {...lotMarkers, ...curPosMarker};
+      overlays = {...lotOverlays};
     });
   }
 
@@ -240,6 +248,17 @@ class _MapViewState extends State<MapView> {
         .from('PublicParkingLot')
         .select('*')
         .eq('management_number', int.parse(markerId))
+        .maybeSingle();
+
+    if(res == null) return null;
+    return ParkingLot.fromMap(res);
+  }
+
+  Future<ParkingLot?> _getParkingLotByOverlayId(String overlayId) async {
+    final res = await SupabaseManager.client
+        .from('PublicParkingLot')
+        .select('*')
+        .eq('management_number', int.parse(overlayId))
         .maybeSingle();
 
     if(res == null) return null;
@@ -443,6 +462,7 @@ class _MapViewState extends State<MapView> {
                 lotMarkers.clear();
                 markers = {...curPosMarker};
                 mapController.clearMarker(markerIds: markers.map((e) => e.markerId).toList());
+                overlays.clear();
               });
             }
 
@@ -479,6 +499,32 @@ class _MapViewState extends State<MapView> {
             });
           },
           polylines: (_isRoadLinkActive && curZoomLevel < 5) ? polylines : [],
+          customOverlays: overlays.toList(),
+          onCustomOverlayTap: (String overlayId, LatLng latLng) async {
+            if(_parkingLotInfoLoading) return;
+
+            setState(() {
+              _parkingLotInfoLoading = true;
+            });
+
+            final lot = await _getParkingLotByOverlayId(overlayId);
+
+            if(!context.mounted || lot == null) return;
+
+            _showParkingLotInfoDialog(
+              context,
+              lot: lot,
+              onClose: () {
+                setState(() {
+                  _parkingLotInfoLoading = false;
+                });
+              }
+            );
+
+            setState(() {
+              selectedLot = lot;
+            });
+          }
         ),
 
         SafeArea(
@@ -648,11 +694,31 @@ class ParkingLotInfoDialog extends StatelessWidget {
 
             divider(),
 
-            ParkingLotInfoRow(
-              icon: Icons.attach_money_rounded,
-              label: '요금',
-              trailingText: lot.price,
-            ),
+            if(lot.price == '무료' || lot.base_time == '0') ...[
+              ParkingLotInfoRow(
+                icon: Icons.attach_money_rounded,
+                label: '요금',
+                trailingText: '무료',
+              ),
+            ],
+
+            if(lot.price == '유료' && lot.base_time != '0') ...[
+              divider(),
+
+              ParkingLotInfoRow(
+                icon: Icons.attach_money_rounded,
+                label: '기본 요금',
+                trailingText: '${lot.base_time}분 - ${lot.base_fee}원',
+              ),
+
+              divider(),
+
+              ParkingLotInfoRow(
+                icon: Icons.attach_money_rounded,
+                label: '추가 요금',
+                trailingText: '${lot.extra_time}분당 ${lot.extra_fee}',
+              ),
+            ],
 
             divider(),
 
@@ -674,8 +740,8 @@ class ParkingLotInfoDialog extends StatelessWidget {
 
             ParkingLotInfoRow(
               icon: Icons.directions_car,
-              label: '최대 주차 가능 대수',
-              trailingText: '${lot.scale}대',
+              label: '주차 대수',
+              trailingText: '${lot.count}/${lot.scale}대',
             ),
 
             SizedBox(height: 16.0),
@@ -684,7 +750,6 @@ class ParkingLotInfoDialog extends StatelessWidget {
       ),
     );
   }
-  // name, type, price, contact, address, scale,
 }
 
 class ParkingLotInfoRow extends StatelessWidget {

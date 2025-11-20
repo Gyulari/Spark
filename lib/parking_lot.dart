@@ -7,7 +7,12 @@ class ParkingLot {
   final String? landlotAddress;
   final String? roadnameAddress;
   final int scale;
+  final int count;
   final String price;
+  final String base_time;
+  final String base_fee;
+  final String extra_time;
+  final String extra_fee;
   final String contact;
 
   ParkingLot({
@@ -19,7 +24,12 @@ class ParkingLot {
     this.landlotAddress,
     this.roadnameAddress,
     required this.scale,
+    required this.count,
     required this.price,
+    required this.base_time,
+    required this.base_fee,
+    required this.extra_time,
+    required this.extra_fee,
     required this.contact,
   });
 
@@ -33,7 +43,12 @@ class ParkingLot {
       landlotAddress: map['landlot_address'],
       roadnameAddress: map['roadname_address'],
       scale: map['scale'] ?? 0,
+      count: map['count'] ?? 0,
       price: map['price'] ?? '',
+      base_time: map['base_time'] ?? '',
+      base_fee: map['base_fee'] ?? '',
+      extra_time: map['extra_time'] ?? '',
+      extra_fee: map['extra_fee'] ?? '',
       contact: map['contact'] ?? '',
     );
   }

@@ -54,6 +54,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final end = now.add(Duration(hours: usageHours));
 
     await SupabaseManager.client.from('reservations').insert({
+      'user_id': SupabaseManager.client.auth.currentUser?.id,
       'management_number': managementNumber,
       'spot_id': spotId,
       'start_time': now.toIso8601String(),

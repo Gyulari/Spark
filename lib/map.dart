@@ -4,15 +4,16 @@ import 'package:spark/app_import.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 import 'package:spark/style.dart';
 import 'package:spark/reserve.dart';
+import 'package:spark/provider.dart';
 
 class MapView extends StatefulWidget {
   const MapView({super.key});
 
   @override
-  State<MapView> createState() => _MapViewState();
+  State<MapView> createState() => MapViewState();
 }
 
-class _MapViewState extends State<MapView> {
+class MapViewState extends State<MapView> {
   RoadLinkManager roadLinkManager = RoadLinkManager();
   StreamSubscription<Position>? _positionStream;
 
@@ -438,6 +439,21 @@ class _MapViewState extends State<MapView> {
     });
   }
 
+  Future<void> focusLotInfo(ParkingLot lot) async {
+    debugPrint('Hey');
+    mapController.setCenter(LatLng(lot.latitude, lot.longitude));
+
+    _showParkingLotInfoDialog(
+      context,
+      lot: lot,
+      onClose: () {
+        setState(() {
+          _parkingLotInfoLoading = false;
+        });
+      }
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -445,6 +461,11 @@ class _MapViewState extends State<MapView> {
         KakaoMap(
           onMapCreated: ((controller) async {
             mapController = controller;
+            final focusLot = context.read<FocusLotState>().focusLot;
+            if(focusLot != null) {
+              focusLotInfo(focusLot);
+              context.read<FocusLotState>().clear();
+            }
             final curBounds = await mapController.getBounds();
             _loadParkingLotsMarkers(curBounds);
           }),
@@ -616,7 +637,7 @@ class MapSearchBar extends StatelessWidget {
   }
 }
 
-class ParkingLotInfoDialog extends StatelessWidget {
+class ParkingLotInfoDialog extends StatefulWidget {
   final ParkingLot lot;
   final VoidCallback? onClose;
 
@@ -625,6 +646,57 @@ class ParkingLotInfoDialog extends StatelessWidget {
     required this.lot,
     this.onClose,
   });
+
+  @override
+  State<ParkingLotInfoDialog> createState() => _ParkingLotInfoDialogState();
+}
+
+class _ParkingLotInfoDialogState extends State<ParkingLotInfoDialog> {
+  bool isFav = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadFavoriteStatus();
+  }
+
+  Future<void> loadFavoriteStatus() async {
+    final status = await isFavorite(widget.lot.managementNumber);
+    setState(() {
+      isFav = status;
+    });
+  }
+
+  Future<bool> isFavorite(int managementNumber) async {
+    final user = SupabaseManager.client.auth.currentUser;
+    if(user == null) return false;
+
+    final res = await SupabaseManager.client
+        .from('user_favorites')
+        .select()
+        .eq('user_id', user.id)
+        .eq('management_number', managementNumber);
+
+    return res.isNotEmpty;
+  }
+
+  Future<void> toggleFavorite(int managementNumber, bool currentlyFav) async {
+    final user = SupabaseManager.client.auth.currentUser;
+    if(user == null) return;
+
+    if(currentlyFav) {
+      await SupabaseManager.client
+          .from('user_favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('management_number', managementNumber);
+    } else {
+      await SupabaseManager.client.from('user_favorites').insert({
+        'user_id': user.id,
+        'management_number': managementNumber,
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -659,11 +731,23 @@ class ParkingLotInfoDialog extends StatelessWidget {
 
                   Spacer(),
 
+                  IconButton(
+                    icon: Icon(
+                      isFav ? Icons.star : Icons.star_border,
+                      color: isFav ? Colors.yellow[700] : Colors.grey,
+                      size: 28.0,
+                    ),
+                    onPressed: () async {
+                      await toggleFavorite(widget.lot.managementNumber, isFav);
+                      loadFavoriteStatus();
+                    },
+                  ),
+
                   InkWell(
                     borderRadius: BorderRadius.circular(20.0),
                     onTap: () {
                       Navigator.of(context).maybePop();
-                      onClose?.call();
+                      widget.onClose?.call();
                     },
                     child: Padding(
                       padding: EdgeInsets.all(6.0),
@@ -681,7 +765,7 @@ class ParkingLotInfoDialog extends StatelessWidget {
             ParkingLotInfoRow(
               icon: Icons.local_parking,
               label: '주차장 이름',
-              trailingText: lot.name,
+              trailingText: widget.lot.name,
             ),
 
             divider(),
@@ -689,12 +773,12 @@ class ParkingLotInfoDialog extends StatelessWidget {
             ParkingLotInfoRow(
               icon: Icons.domain,
               label: '주차장 유형',
-              trailingText: lot.type,
+              trailingText: widget.lot.type,
             ),
 
             divider(),
 
-            if(lot.price == '무료' || lot.base_time == '0') ...[
+            if(widget.lot.price == '무료' || widget.lot.base_time == '0') ...[
               ParkingLotInfoRow(
                 icon: Icons.attach_money_rounded,
                 label: '요금',
@@ -702,13 +786,13 @@ class ParkingLotInfoDialog extends StatelessWidget {
               ),
             ],
 
-            if(lot.price == '유료' && lot.base_time != '0') ...[
+            if(widget.lot.price == '유료' && widget.lot.base_time != '0') ...[
               divider(),
 
               ParkingLotInfoRow(
                 icon: Icons.attach_money_rounded,
                 label: '기본 요금',
-                trailingText: '${lot.base_time}분 - ${lot.base_fee}원',
+                trailingText: '${widget.lot.base_time}분 - ${widget.lot.base_fee}원',
               ),
 
               divider(),
@@ -716,7 +800,7 @@ class ParkingLotInfoDialog extends StatelessWidget {
               ParkingLotInfoRow(
                 icon: Icons.attach_money_rounded,
                 label: '추가 요금',
-                trailingText: '${lot.extra_time}분당 ${lot.extra_fee}',
+                trailingText: '${widget.lot.extra_time}분당 ${widget.lot.extra_fee}',
               ),
             ],
 
@@ -725,7 +809,7 @@ class ParkingLotInfoDialog extends StatelessWidget {
             ParkingLotInfoRow(
               icon: Icons.phone,
               label: '연락처',
-              trailingText: lot.contact,
+              trailingText: widget.lot.contact,
             ),
 
             divider(),
@@ -733,7 +817,7 @@ class ParkingLotInfoDialog extends StatelessWidget {
             ParkingLotInfoRow(
               icon: Icons.place,
               label: '주소',
-              trailingText: lot.displayAddress,
+              trailingText: widget.lot.displayAddress,
             ),
 
             divider(),
@@ -741,7 +825,7 @@ class ParkingLotInfoDialog extends StatelessWidget {
             ParkingLotInfoRow(
               icon: Icons.directions_car,
               label: '주차 대수',
-              trailingText: '${lot.count}/${lot.scale}대',
+              trailingText: '${widget.lot.count}/${widget.lot.scale}대',
             ),
 
             SizedBox(height: 16.0),
@@ -763,7 +847,7 @@ class ParkingLotInfoDialog extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ReservationScreen(lot: lot),
+                        builder: (_) => ReservationScreen(lot: widget.lot),
                       )
                     );
                   },

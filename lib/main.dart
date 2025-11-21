@@ -10,7 +10,16 @@ void main() async {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
   await SupabaseManager.init();
-  runApp(const Spark());
+  
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => NavState()),
+        ChangeNotifierProvider(create: (_) => FocusLotState()),
+      ],
+      child: const Spark(),
+    ),
+  );
 }
 
 class Spark extends StatelessWidget {

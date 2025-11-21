@@ -1,6 +1,6 @@
 import 'package:spark/app_import.dart';
 import 'package:spark/style.dart';
-import 'package:spark/nav_stat.dart';
+import 'package:spark/provider.dart';
 
 class MyPage extends StatefulWidget {
   const MyPage({super.key});

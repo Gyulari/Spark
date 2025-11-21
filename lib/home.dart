@@ -5,24 +5,30 @@ import 'package:spark/favorite.dart';
 import 'package:spark/reserve_history.dart';
 import 'package:spark/my_page.dart';
 import 'package:spark/bottom_nav_bar.dart';
-import 'package:spark/nav_stat.dart';
+import 'package:spark/provider.dart';
 
 class HomeScreen extends StatefulWidget{
   const HomeScreen({super.key});
 
   // 로그인 위젯 State 객체
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  final List<Widget> _screens = [
-    MapView(),
-    ParkingInfo(),
-    Favorite(),
-    ReserveHistory(),
-    MyPage(),
-  ];
+class HomeScreenState extends State<HomeScreen> {
+  late List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      MapView(),
+      ParkingInfo(),
+      Favorite(),
+      ReserveHistory(),
+      MyPage(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {

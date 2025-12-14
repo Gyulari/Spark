@@ -26,7 +26,7 @@ class MapViewState extends State<MapView> {
 
   final _searchC = TextEditingController();
 
-  LatLng curCenter = LatLng(37.5665, 126.9780);
+  LatLng curCenter = LatLng(34.93440, 127.51500);
   int curZoomLevel = 5;
 
   LatLng? curUserPos;
@@ -46,6 +46,7 @@ class MapViewState extends State<MapView> {
   ParkingLot? selectedLot;
 
   bool _parkingLotInfoLoading = false;
+  bool _showPreParkingInfo = false;
 
   Future<List<LatLng>> _keywordSearch(String keyword) async {
     const apiKey = '5d85b804b65d01a8faf7acb5d95d8c76';
@@ -447,9 +448,11 @@ class MapViewState extends State<MapView> {
     setState(() {
       if(_isShoulderRoadLinkActive) {
         _isShoulderRoadLinkActive = false;
+        _showPreParkingInfo = false;
       }
       else {
         _isShoulderRoadLinkActive = true;
+        _showPreParkingInfo = true;
         loadShoulderRoadLinks();
       }
     });
@@ -545,6 +548,10 @@ class MapViewState extends State<MapView> {
           yAnchor: 1.0,
         )
     );
+
+    setState(() {
+
+    });
   }
 
   @override
@@ -694,7 +701,26 @@ class MapViewState extends State<MapView> {
               color: _isShoulderRoadLinkActive ? Colors.blueAccent : Colors.grey[400],
             ),
           ),
-        )
+        ),
+
+        if(_showPreParkingInfo)
+          Center(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showPreParkingInfo = false;
+                });
+              },
+              child: Container(
+                color: Colors.black.withAlpha(125),
+                alignment: Alignment.center,
+                child: Image.asset(
+                  'assets/total_parking_info.png',
+                  fit: BoxFit.fill,
+                ),
+              ),
+            ),
+          )
       ],
     );
   }

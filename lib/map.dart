@@ -14,14 +14,15 @@ class MapView extends StatefulWidget {
 }
 
 class MapViewState extends State<MapView> {
-  RoadLinkManager roadLinkManager = RoadLinkManager();
+  // RoadLinkManager roadLinkManager = RoadLinkManager();
   StreamSubscription<Position>? _positionStream;
 
   late KakaoMapController mapController;
   final String kakaoRestApiKey = '5d85b804b65d01a8faf7acb5d95d8c76';
 
   bool _isGPSActive = false;
-  bool _isRoadLinkActive = false;
+  // bool _isRoadLinkActive = false;
+  bool _isShoulderRoadLinkActive = false;
 
   final _searchC = TextEditingController();
 
@@ -35,6 +36,7 @@ class MapViewState extends State<MapView> {
   Set<Marker> curPosMarker = {};
   Set<Marker> markers = {};
   Set<CustomOverlay> lotOverlays = {};
+  Set<CustomOverlay> restrictedTimeOverlays = {};
   Set<CustomOverlay> overlays = {};
 
   Set<String> curRegions = {};
@@ -266,6 +268,7 @@ class MapViewState extends State<MapView> {
     return ParkingLot.fromMap(res);
   }
 
+  /* Unuse
   Future<void> updateRegions(LatLngBounds bounds) async {
     if(curZoomLevel >= 5) return;
 
@@ -438,9 +441,21 @@ class MapViewState extends State<MapView> {
       }
     });
   }
+  */
+
+  void _toggleShoulderRoadLinks() {
+    setState(() {
+      if(_isShoulderRoadLinkActive) {
+        _isShoulderRoadLinkActive = false;
+      }
+      else {
+        _isShoulderRoadLinkActive = true;
+        loadShoulderRoadLinks();
+      }
+    });
+  }
 
   Future<void> focusLotInfo(ParkingLot lot) async {
-    debugPrint('Hey');
     mapController.setCenter(LatLng(lot.latitude, lot.longitude));
 
     _showParkingLotInfoDialog(
@@ -451,6 +466,84 @@ class MapViewState extends State<MapView> {
           _parkingLotInfoLoading = false;
         });
       }
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> fetchShoulderRoads() async {
+    final res = await SupabaseManager.client
+        .from('shoulder_roads')
+        .select();
+
+    return List<Map<String, dynamic>>.from(res);
+  }
+
+  List<LatLng> parseLatLngList(dynamic jsonArray) {
+    return (jsonArray as List)
+        .map((e) => LatLng(e['lat'], e['lng']))
+        .toList();
+  }
+
+  Future<void> loadShoulderRoadLinks() async {
+    final roads = await fetchShoulderRoads();
+    Color roadColor;
+
+    polylines.clear();
+    restrictedTimeOverlays.clear();
+
+    for(var road in roads) {
+      final points = parseLatLngList(road['points']);
+
+      if(road['timed_restriction']){
+        roadColor = Colors.orangeAccent;
+      } else {
+        roadColor = Colors.green;
+      }
+
+      polylines.add(
+        Polyline(
+          polylineId: 'road_${road['id']}',
+          points: points,
+          strokeColor: roadColor,
+          strokeWidth: 5,
+        )
+      );
+    }
+
+    restrictedTimeOverlays.add(
+      CustomOverlay(
+        customOverlayId: 'restricted_0',
+        latLng: LatLng(34.93545, 127.51305),
+        content: '<div style="font-size: 22px;font-weight: 800;color: #FF9800;white-space: nowrap;">21:00~07:00</div>',
+        xAnchor: 0.0,
+        yAnchor: 0.0,
+      )
+    );
+    restrictedTimeOverlays.add(
+        CustomOverlay(
+          customOverlayId: 'restricted_1',
+          latLng: LatLng(34.93520, 127.51275),
+          content: '<div style="font-size: 22px;font-weight: 800;color: #FF9800;white-space: nowrap;">21:00~07:00</div>',
+          xAnchor: 1.0,
+          yAnchor: 0.0,
+        )
+    );
+    restrictedTimeOverlays.add(
+        CustomOverlay(
+          customOverlayId: 'restricted_2',
+          latLng: LatLng(34.93440, 127.51300),
+          content: '<div style="font-size: 22px;font-weight: 800;color: #FF9800;white-space: nowrap;">21:00~07:00</div>',
+          xAnchor: 1.0,
+          yAnchor: 0.0,
+        )
+    );
+    restrictedTimeOverlays.add(
+        CustomOverlay(
+          customOverlayId: 'restricted_3',
+          latLng: LatLng(34.93275, 127.51265),
+          content: '<div style="font-size: 22px;font-weight: 800;color: #FF9800;white-space: nowrap;">11:00~13:00</div>',
+          xAnchor: 1.0,
+          yAnchor: 1.0,
+        )
     );
   }
 
@@ -487,7 +580,7 @@ class MapViewState extends State<MapView> {
               });
             }
 
-            updateRegions(curBounds);
+            // updateRegions(curBounds);
           },
           center: curCenter,
           currentLevel: 3,
@@ -519,8 +612,9 @@ class MapViewState extends State<MapView> {
               selectedLot = lot;
             });
           },
-          polylines: (_isRoadLinkActive && curZoomLevel < 5) ? polylines : [],
-          customOverlays: overlays.toList(),
+          // polylines: (_isRoadLinkActive && curZoomLevel < 5) ? polylines : [],
+          polylines: (_isShoulderRoadLinkActive && curZoomLevel < 5) ? polylines : [],
+          customOverlays: (_isShoulderRoadLinkActive && curZoomLevel < 5) ? [...overlays, ...restrictedTimeOverlays].toList() : overlays.toList(),
           onCustomOverlayTap: (String overlayId, LatLng latLng) async {
             if(_parkingLotInfoLoading) return;
 
@@ -590,11 +684,14 @@ class MapViewState extends State<MapView> {
             mini: true,
             backgroundColor: Colors.white,
             onPressed: () async {
-              _toggleRoadLinks();
+              // _toggleRoadLinks();
+              _toggleShoulderRoadLinks();
             },
             child: Icon(
-              _isRoadLinkActive ? Icons.map : Icons.map_outlined,
-              color: _isRoadLinkActive ? Colors.blueAccent : Colors.grey[400],
+              // _isRoadLinkActive ? Icons.map : Icons.map_outlined,
+              // color: _isRoadLinkActive ? Colors.blueAccent : Colors.grey[400],
+              _isShoulderRoadLinkActive ? Icons.map : Icons.map_outlined,
+              color: _isShoulderRoadLinkActive ? Colors.blueAccent : Colors.grey[400],
             ),
           ),
         )
@@ -909,6 +1006,7 @@ class ParkingLotInfoRow extends StatelessWidget {
   }
 }
 
+/* Unuse
 class RoadLinkManager {
   Map<String, List<Polyline>> roadLinksForRegion = {};
 
@@ -933,3 +1031,4 @@ class RoadLinkManager {
     return allRoadLinks;
   }
 }
+*/

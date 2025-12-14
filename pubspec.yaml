@@ -67,6 +67,8 @@ flutter:
     - assets/spark_logo.png
     - assets/icons/user_icon_pos.png
     - assets/videos/test_video.mp4
+    - assets/shoulder_parking_info.png
+    - assets/videos/parking_example.mp4
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -10,11 +10,10 @@ class MyPage extends StatefulWidget {
 }
 
 class _MyPageState extends State<MyPage> {
-  String userName = '김스파크';
-  String userEmail = 'spark@example.com';
-
   @override
   Widget build(BuildContext context) {
+    final userState = context.watch<UserInfoState>();
+
     return Container(
       color: Colors.white,
       child: CustomScrollView(
@@ -38,7 +37,7 @@ class _MyPageState extends State<MyPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _profileCard(),
+                  _profileCard(userState.userName, userState.userEmail),
 
                   SizedBox(height: 20.0),
 
@@ -79,8 +78,14 @@ class _MyPageState extends State<MyPage> {
                           20.0, FontWeight.bold, Colors.red, TextAlign.center
                         ),
                       ),
-                      onTap: () {
-                        // todo: Logout
+                      onTap: () async {
+                        await SupabaseManager.client.auth.signOut();
+
+                        if(!context.mounted) return;
+
+                        Navigator.pushNamedAndRemoveUntil(
+                          context, '/login', (route) => false
+                        );
                       },
                     ),
                   )
@@ -93,7 +98,7 @@ class _MyPageState extends State<MyPage> {
     );
   }
 
-  Widget _profileCard() {
+  Widget _profileCard(String name, String email) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
       decoration: BoxDecoration(
@@ -113,20 +118,20 @@ class _MyPageState extends State<MyPage> {
             radius: 30.0,
             backgroundColor: Colors.blueAccent,
             child: simpleText(
-              userName,
+              name,
               12.0, FontWeight.bold, Colors.white, TextAlign.center
             ),
           ),
 
           SizedBox(height: 10.0),
           simpleText(
-            userName,
+            name,
             24.0, FontWeight.bold, Colors.black, TextAlign.center
           ),
 
           SizedBox(height: 2.0),
           simpleText(
-            userEmail,
+            email,
             20.0, FontWeight.bold, Colors.black, TextAlign.center
           ),
 

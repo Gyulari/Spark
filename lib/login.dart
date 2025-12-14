@@ -1,5 +1,6 @@
 import 'package:spark/app_import.dart';
 import 'package:spark/style.dart';
+import 'package:spark/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,6 +37,10 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Log in completed: ${res.user!.email}'),),
         );
+
+        await context.read<UserInfoState>().fetchUserInfo();
+
+        if(!mounted) return;
 
         Navigator.pushReplacementNamed(context, '/home');
       }

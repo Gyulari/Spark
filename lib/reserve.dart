@@ -23,7 +23,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
 
     lot = widget.lot;
 
-    _vController = VideoPlayerController.asset('assets/videos/test_video.mp4')
+    _vController = VideoPlayerController.asset('assets/videos/parking_example.mp4')
       ..initialize().then((_) {
         setState(() {});
         _vController.play();

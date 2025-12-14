@@ -16,6 +16,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => NavState()),
         ChangeNotifierProvider(create: (_) => FocusLotState()),
+        ChangeNotifierProvider(create: (_) => UserInfoState()),
       ],
       child: const Spark(),
     ),

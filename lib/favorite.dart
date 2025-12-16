@@ -105,34 +105,74 @@ class _FavoriteState extends State<Favorite> {
                               ),
                               SizedBox(height: 8.0),
 
-                              simpleText(
-                                '유형 : ${lot.type}',
-                                18.0, FontWeight.normal, Colors.black, TextAlign.start
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.local_parking, size: 18.0, color: Colors.yellow[800]),
+                                  SizedBox(width: 8.0),
+                                  simpleText(
+                                      '유형 : ${lot.type}',
+                                      18.0, FontWeight.bold, Colors.black, TextAlign.start
+                                  ),
+                                ],
                               ),
                               SizedBox(height: 8.0),
 
-                              simpleText(
-                                '요금 : ${lot.price}',
-                                18.0, FontWeight.normal, Colors.black, TextAlign.start
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.money, size: 18.0, color: Colors.yellow[800]),
+                                  SizedBox(width: 8.0),
+                                  simpleText(
+                                      '요금 : ${lot.price}',
+                                      18.0, FontWeight.bold, Colors.black, TextAlign.start
+                                  ),
+                                ],
                               ),
                               SizedBox(height: 8.0),
 
-                              simpleText(
-                                '연락처 : ${lot.contact}',
-                                18.0, FontWeight.normal, Colors.black, TextAlign.start
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.call, size: 18.0, color: Colors.yellow[800]),
+                                  SizedBox(width: 8.0),
+                                  simpleText(
+                                      '유형 : ${lot.contact}',
+                                      18.0, FontWeight.bold, Colors.black, TextAlign.start
+                                  ),
+                                ],
                               ),
                               SizedBox(height: 8.0),
 
-                              simpleText(
-                                '주소 : ${lot.displayAddress}',
-                                18.0, FontWeight.normal, Colors.black, TextAlign.start
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.place, size: 18.0, color: Colors.yellow[800]),
+                                  SizedBox(width: 8.0),
+                                  simpleText(
+                                      '주소 : ${lot.displayAddress}',
+                                      18.0, FontWeight.bold, Colors.black, TextAlign.start
+                                  ),
+                                ],
                               ),
                               SizedBox(height: 8.0),
 
-                              simpleText(
-                                '주차 대수 : ${lot.count} / ${lot.scale}',
-                                18.0, FontWeight.normal, Colors.black, TextAlign.start
+                              SizedBox(height: 10.0),
+                              Divider(height: 1.0, color: Color(0xFFE0E0E0)),
+                              SizedBox(height: 10.0),
+
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.directions_car, size: 18.0, color: Colors.yellow[800]),
+                                  SizedBox(width: 8.0),
+                                  simpleText(
+                                      '주차 대수 : ${lot.count} / ${lot.scale}',
+                                      18.0, FontWeight.bold, Colors.black, TextAlign.start
+                                  ),
+                                ],
                               ),
+                              SizedBox(height: 8.0),
 
                               SizedBox(height: 12.0),
                               Row(

@@ -130,27 +130,55 @@ class _ReserveHistoryState extends State<ReserveHistory> {
                             ),
                             SizedBox(height: 8.0),
 
-                            simpleText(
-                              '유형 : ${lot.type}',
-                              18.0, FontWeight.normal, Colors.black, TextAlign.start
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Icon(Icons.local_parking, size: 18.0, color: Colors.blueAccent),
+                                SizedBox(width: 6.0),
+                                simpleText(
+                                  '유형 : ${lot.type}',
+                                  18.0, FontWeight.bold, Colors.black, TextAlign.start
+                                ),
+                              ],
                             ),
                             SizedBox(height: 8.0),
 
-                            simpleText(
-                              '주차한 칸 : ${reservation['spot_id']}',
-                              18.0, FontWeight.normal, Colors.black, TextAlign.start
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Icon(Icons.place_outlined, size: 18.0, color: Colors.blueAccent),
+                                SizedBox(width: 6.0),
+                                simpleText(
+                                    '주차한 칸 : ${reservation['spot_id']}',
+                                    18.0, FontWeight.bold, Colors.black, TextAlign.start
+                                ),
+                              ],
                             ),
                             SizedBox(height: 8.0),
 
-                            simpleText(
-                              '시작 시각 : $startTime',
-                              18.0, FontWeight.normal, Colors.black, TextAlign.start
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Icon(Icons.timer_outlined, size: 18.0, color: Colors.blueAccent),
+                                SizedBox(width: 6.0),
+                                simpleText(
+                                    '시작 시각 : $startTime',
+                                    18.0, FontWeight.normal, Colors.black, TextAlign.start
+                                ),
+                              ],
                             ),
                             SizedBox(height: 8.0),
 
-                            simpleText(
-                              '종료 시각 : $endTime',
-                              18.0, FontWeight.normal, Colors.black, TextAlign.start
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Icon(Icons.timelapse_outlined, size: 18.0, color: Colors.blueAccent),
+                                SizedBox(width: 6.0),
+                                simpleText(
+                                    '종료 시각 : $endTime',
+                                    18.0, FontWeight.normal, Colors.black, TextAlign.start
+                                ),
+                              ],
                             ),
                             SizedBox(height: 8.0),
                           ],

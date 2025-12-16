@@ -670,8 +670,10 @@ class MapViewState extends State<MapView> {
           ),
         ),
 
+        SizedBox(height: 40.0),
+
         Positioned(
-          top: 75.0,
+          top: 135.0,
           right: 16.0,
           child: FloatingActionButton(
             mini: true,
@@ -684,8 +686,10 @@ class MapViewState extends State<MapView> {
           ),
         ),
 
+        SizedBox(height: 40.0),
+
         Positioned(
-          top: 150.0,
+          top: 195.0,
           right: 16.0,
           child: FloatingActionButton(
             mini: true,

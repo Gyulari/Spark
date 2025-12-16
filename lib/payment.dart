@@ -161,7 +161,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Widget _buildTimeSelectorCard() {
     return Container(
-      padding: EdgeInsets.all(36.0),
+      padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 36.0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -184,6 +184,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           SizedBox(height: 18),
 
           Container(
+            width: double.infinity,
             padding: EdgeInsets.symmetric(horizontal: 30.0, vertical: 14.0),
             margin: EdgeInsets.only(bottom: 14.0),
             decoration: BoxDecoration(
@@ -198,22 +199,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   '시작 시각',
                   18.0, FontWeight.bold, Colors.black, TextAlign.start
                 ),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.remove),
-                      onPressed: () => _changeStartTime(-1),
-                    ),
-                    simpleText(
-                      '${startTime.hour} 시 ${startTime.minute} 분',
-                      18.0, FontWeight.bold, Colors.black, TextAlign.end
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.add),
-                      onPressed: () => _changeStartTime(1),
-                    ),
-                  ],
-                )
+                Flexible(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.remove, size: 18.0),
+                        onPressed: () => _changeStartTime(-1),
+                      ),
+                      simpleText(
+                          '${startTime.hour} 시 ${startTime.minute} 분',
+                          18.0, FontWeight.bold, Colors.black, TextAlign.end
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.add, size: 18.0),
+                        onPressed: () => _changeStartTime(1),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -221,6 +225,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           SizedBox(height: 15),
 
           Container(
+            width: double.infinity,
             padding: EdgeInsets.symmetric(horizontal: 30.0, vertical: 14.0),
             margin: EdgeInsets.only(bottom: 14.0),
             decoration: BoxDecoration(
@@ -235,28 +240,30 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   '사용 시간',
                   18.0, FontWeight.bold, Colors.black, TextAlign.start
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.remove),
-                          onPressed: usageHours > 1
-                            ? () => setState(() => usageHours--)
-                            : null,
-                        ),
-                        simpleText(
-                          '$usageHours 시간 00 분',
-                          18.0, FontWeight.bold, Colors.black, TextAlign.start
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.add),
-                          onPressed: () => setState(() => usageHours++),
-                        ),
-                      ],
-                    )
-                  ],
+                Flexible(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.remove, size: 18.0),
+                            onPressed: usageHours > 1
+                                ? () => setState(() => usageHours--)
+                                : null,
+                          ),
+                          simpleText(
+                              '$usageHours 시간 00 분',
+                              18.0, FontWeight.bold, Colors.black, TextAlign.start
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.add, size: 18.0),
+                            onPressed: () => setState(() => usageHours++),
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
                 ),
               ],
             ),

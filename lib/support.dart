@@ -199,12 +199,19 @@ class SupportScreen extends StatelessWidget {
     return Column(
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.circle, color: iconColor, size: 8.0),
+            Baseline(
+              baseline: 13.5,
+              baselineType: TextBaseline.alphabetic,
+              child: Icon(Icons.circle, color: iconColor, size: 8.0),
+            ),
             SizedBox(width: 8.0),
-            simpleText(
-                text,
-                16.0, FontWeight.normal, Colors.black, TextAlign.start
+            Expanded(
+              child: simpleText(
+                  text,
+                  16.0, FontWeight.normal, Colors.black, TextAlign.start
+              ),
             ),
           ],
         ),
